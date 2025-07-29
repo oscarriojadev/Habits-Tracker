@@ -66,7 +66,47 @@ if st.button("💾 Guardar registro"):
 st.markdown("---")
 st.subheader("📆 Calendario visual")
 
+# Estilo CSS para tooltips
+st.markdown("""
+<style>
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 220px;
+  background-color: black;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -110px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # Mostrar semana por semana
+dias_semana = ["L", "M", "X", "J", "V", "S", "D"]
+cols_encabezado = st.columns(7)
+for i, dia_nombre in enumerate(dias_semana):
+    cols_encabezado[i].markdown(f"<b style='color:white;'>{dia_nombre}</b>", unsafe_allow_html=True)
+
 for semana in cal:
     cols = st.columns(7)
     for i, dia_semana in enumerate(semana):
@@ -77,8 +117,18 @@ for semana in cal:
             registro = data.get(clave_dia, {})
             pag = registro.get("paginas", 0)
             tem = registro.get("temario", "")
-            col = registro.get("color", "#000000")
-            cols[i].markdown(
-                f"<div style='color:{col}; font-weight:bold;'>{dia_semana}<br>{pag} pág.</div>",
-                unsafe_allow_html=True
-            )
+            color = registro.get("color", "#FFFFFF")
+            if tem:
+                html = f"""
+                <div class="tooltip" style="color:{color}; font-weight:bold; font-size:18px;">
+                    {dia_semana}<br>{pag} pág.
+                    <span class="tooltiptext">{tem}</span>
+                </div>
+                """
+            else:
+                html = f"""
+                <div style="color:{color}; font-weight:bold; font-size:18px;">
+                    {dia_semana}<br>{pag} pág.
+                </div>
+                """
+            cols[i].markdown(html, unsafe_allow_html=True)
