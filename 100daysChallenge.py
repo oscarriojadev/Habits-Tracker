@@ -229,10 +229,47 @@ if st.button("💾 Guardar registro"):
     st.rerun()
 
 # ----------------------------------------------------------
-# 7. Calendar visual
+# 7. Calendar visual WITH tooltip
 # ----------------------------------------------------------
 st.markdown("---")
 st.subheader("📆 Calendario visual")
+
+# CSS for nice tooltips
+st.markdown("""
+<style>
+.tooltip {
+  position: relative;
+  display: inline-block;
+  font-weight: bold;
+  font-size: 18px;
+  cursor: pointer;
+}
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 260px;
+  background-color: #111;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px;
+  position: absolute;
+  z-index: 10;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -130px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 12px;
+  white-space: pre-wrap;
+  line-height: 1.2;
+}
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+</style>
+""", unsafe_allow_html=True)
+
 for semana in calendar.monthcalendar(año, meses[mes_nombre]):
     cols = st.columns(7)
     for i, d in enumerate(semana):
@@ -243,7 +280,19 @@ for semana in calendar.monthcalendar(año, meses[mes_nombre]):
         rec = data.get(key, {})
         pag = rec.get("paginas", 0)
         color = rec.get("color", "#FFFFFF")
-        cols[i].markdown(
-            f'<div style="color:{color}; font-weight:bold; font-size:18px;">{d}<br>{pag} pág.</div>',
-            unsafe_allow_html=True
-        )
+
+        # Build tooltip content
+        tips = []
+        for t in rec.get("topics", []):
+            tips.append(f"• {t['tema_nombre']} ({t['paginas']} p.)")
+        if rec.get("notas"):
+            tips.append(f"Notas: {rec['notas']}")
+        tooltip_body = "\n".join(tips) if tips else "Sin registro"
+
+        html = f"""
+        <div class="tooltip" style="color:{color};">
+            {d}<br>{pag} pág.
+            <span class="tooltiptext">{tooltip_body}</span>
+        </div>
+        """
+        cols[i].markdown(html, unsafe_allow_html=True)
