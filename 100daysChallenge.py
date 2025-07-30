@@ -117,7 +117,7 @@ paginas = st.number_input(
     "¿Cuántas páginas estudiaste hoy?",
     min_value=0,
     max_value=100,
-    value=paginas_tema
+    value=int(paginas_tema)   # ← make sure it is int
 )
 temario = st.text_area("Detalles / notas adicionales:", value=data.get(clave, {}).get("temario", ""))
 color = st.color_picker("Elige el color del texto para este día", value=data.get(clave, {}).get("color", "#000000"))
