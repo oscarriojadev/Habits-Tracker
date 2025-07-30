@@ -903,7 +903,7 @@ buffer = io.StringIO()
 writer = csv.writer(buffer)
 writer.writerow(["Fecha", "Páginas", "Tema(s)", "Notas", "Color"])
 for k, v in sorted(data.items()):
-    temas = " | ".join([t["tema_nombre"] for t in v.get("topics", [])])
+    temas = " | ".join([t["tema_nombre"] for t in (v.get("topics", []) if isinstance(v, dict) else [])])
     writer.writerow([k, v.get("paginas", 0), temas, v.get("notas", ""), v.get("color", "")])
 csv_bytes = buffer.getvalue().encode("utf-8")
 st.download_button(
