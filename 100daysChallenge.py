@@ -942,7 +942,56 @@ if top10:
         st.write(f"• {tema}: {pag} p.")
 
 # ----------------------------------------------------------
-# 12. Footer
+# 12. Topics already studied (persistent checklist)
+# ----------------------------------------------------------
+st.markdown("---")
+st.subheader("✅ Temas ya estudiados")
+
+# ------------- helper storage -------------
+STUDIED_KEY = "_studied_topics"          # key inside the same JSON file
+if STUDIED_KEY not in data:
+    data[STUDIED_KEY] = []
+
+studied_set = set(data[STUDIED_KEY])     # faster look-ups
+
+# ------------- build master list -------------
+master_topics = []
+for g, aid, aname, tid, tema, pages in SYLLABUS:
+    uid = f"{g}|{aid}|{tid}"            # unique id for the topic
+    master_topics.append((uid, g, aname, f"T{tid} – {tema} ({pages} p.)"))
+
+# ------------- search filter -------------
+filtro = st.text_input("🔍 Filtrar temas:", placeholder="Ej. Regresión")
+if filtro:
+    filtro = filtro.lower()
+    master_topics = [t for t in master_topics if filtro in t[2].lower() or filtro in t[3].lower()]
+
+# ------------- display -------------
+cambios = False
+for uid, g, aname, tema_txt in sorted(master_topics, key=lambda x: (x[1], x[2], x[3])):
+    checked = uid in studied_set
+    nuevo = st.checkbox(
+        f"**{g} ▸ {aname} ▸** {tema_txt}",
+        value=checked,
+        key=f"cb_{uid}"
+    )
+    if nuevo != checked:
+        cambios = True
+        if nuevo:
+            studied_set.add(uid)
+        else:
+            studied_set.discard(uid)
+
+if cambios:
+    data[STUDIED_KEY] = list(studied_set)
+    guardar_datos()
+    st.rerun()
+
+# ------------- quick summary -------------
+st.metric("Temas completados", f"{len(studied_set)} / {len(SYLLABUS)}")
+
+# ----------------------------------------------------------
+# 13. Footer (renumbered)
 # ----------------------------------------------------------
 st.markdown("---")
 st.caption("Hecho con ❤️ para el reto de 100 días. ¡Tú puedes!")
