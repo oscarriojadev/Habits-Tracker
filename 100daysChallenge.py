@@ -164,13 +164,16 @@ def get_rank(pages):
 st.set_page_config(page_title="100-Day Challenge", page_icon="📚")
 st.sidebar.title("📊 Progreso global")
 
+# Páginas
 total_pages = sum(d.get("paginas", 0) for d in data.values() if isinstance(d, dict))
 st.sidebar.metric(label="Páginas leídas", value=f"{total_pages} / 3000")
 st.sidebar.progress(total_pages / 3000)
 
 # Temas completados
 studied = len(data.get("_studied_topics", []))
-st.sidebar.metric(label="Temas completados", value=f"{studied} / {len(SYLLABUS)}")
+total_temas = len(SYLLABUS)
+st.sidebar.metric(label="Temas completados", value=f"{studied} / {total_temas}")
+st.sidebar.progress(studied / total_temas)
 
 # Rango
 _, rank = get_rank(total_pages)
