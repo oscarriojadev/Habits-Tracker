@@ -6,6 +6,8 @@ import calendar
 import json
 import os
 from collections import defaultdict
+from datetime import date
+import random
 
 # ----------------------------------------------------------
 # 1. Data file
@@ -64,7 +66,7 @@ SYLLABUS = [
     ("Materias Comunes", 4, "Cuentas", 5, "El sistema de cuentas y los agregados en el SEC 2010 (II)", 22),
     ("Materias Comunes", 4, "Cuentas", 6, "Tablas de origen y destino y marco input-output", 26),
     ("Materias Comunes", 4, "Cuentas", 7, "Medición de variaciones de precio y volumen", 20),
-    ("Materias Comunes", 4, "Cuentas", 8, "Cuentas nacionales trimestrales y regionales", 19),
+    ("Materias Comunes", 4, "Cuentas", 8, "Las cuentas nacionales trimestrales y regionales", 19),
     ("Materias Comunes", 4, "Cuentas", 9, "Más allá del marco central del SEC 2010", 32),
     ("Materias Comunes", 5, "Demografía", 1, "La demografía y principios del análisis", 18),
     ("Materias Comunes", 5, "Demografía", 2, "Mortalidad", 23),
@@ -136,9 +138,8 @@ SYLLABUS = [
 ]
 
 # Build nested dicts
-grupo_apt = defaultdict(list)          # grupo -> [(id, nombre), ...]
-apt_tema  = defaultdict(list)          # (grupo, apt_nombre) -> [(t_id, tema, pages)]
-grupos = []
+grupo_apt = defaultdict(list)
+apt_tema  = defaultdict(list)
 for g, aid, aname, tid, tema, pages in SYLLABUS:
     if (aid, aname) not in grupo_apt[g]:
         grupo_apt[g].append((aid, aname))
@@ -148,11 +149,9 @@ grupos = sorted(grupo_apt.keys())
 # ----------------------------------------------------------
 # 3. Gamification helpers
 # ----------------------------------------------------------
-RANKS = [
-    (0, "🪙 Copper"), (200, "🥉 Bronze"), (500, "🥈 Silver"),
-    (900, "🥇 Gold"), (1400, "💎 Platinum"), (2000, "🔥 Elite"),
-    (2600, "🌟 Master"), (3000, "🏆 Legend")
-]
+RANKS = [(0, "🪙 Copper"), (200, "🥉 Bronze"), (500, "🥈 Silver"),
+         (900, "🥇 Gold"), (1400, "💎 Platinum"), (2000, "🔥 Elite"),
+         (2600, "🌟 Master"), (3000, "🏆 Legend")]
 def get_rank(pages):
     for th, name in RANKS[::-1]:
         if pages >= th:
@@ -212,7 +211,10 @@ for idx in range(rows):
         pages_total = int(pages_str.split(" ")[0])
     with col4:
         pages_read = st.number_input("Páginas", min_value=0, max_value=100, value=pages_total, key=f"p_{clave}_{idx}")
-    new_topics.append({"grupo": grupo, "aptitud_id": int(aid), "aptitud_nombre": aname, "tema_id": int(tid), "tema_nombre": tema, "paginas": pages_read})
+    new_topics.append({
+        "grupo": grupo, "aptitud_id": int(aid), "aptitud_nombre": aname,
+        "tema_id": int(tid), "tema_nombre": tema, "paginas": pages_read
+    })
     total_day += pages_read
 
 notas = st.text_area("Notas adicionales:", value=record.get("notas", ""))
@@ -229,46 +231,16 @@ if st.button("💾 Guardar registro"):
     st.rerun()
 
 # ----------------------------------------------------------
-# 7. Calendar visual WITH tooltip
+# 7. Calendar visual with tooltip
 # ----------------------------------------------------------
 st.markdown("---")
 st.subheader("📆 Calendario visual")
-
-# CSS for nice tooltips
 st.markdown("""
 <style>
-.tooltip {
-  position: relative;
-  display: inline-block;
-  font-weight: bold;
-  font-size: 18px;
-  cursor: pointer;
-}
-.tooltip .tooltiptext {
-  visibility: hidden;
-  width: 260px;
-  background-color: #111;
-  color: #fff;
-  text-align: left;
-  border-radius: 6px;
-  padding: 8px;
-  position: absolute;
-  z-index: 10;
-  bottom: 125%;
-  left: 50%;
-  margin-left: -130px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  font-size: 12px;
-  white-space: pre-wrap;
-  line-height: 1.2;
-}
-.tooltip:hover .tooltiptext {
-  visibility: visible;
-  opacity: 1;
-}
-</style>
-""", unsafe_allow_html=True)
+.tooltip{position:relative;display:inline-block;font-weight:bold;font-size:18px;cursor:pointer}
+.tooltip .tooltiptext{visibility:hidden;width:260px;background:#111;color:#fff;text-align:left;border-radius:6px;padding:8px;position:absolute;z-index:10;bottom:125%;left:50%;margin-left:-130px;font-size:12px;white-space:pre-wrap;line-height:1.2}
+.tooltip:hover .tooltiptext{visibility:visible}
+</style>""", unsafe_allow_html=True)
 
 for semana in calendar.monthcalendar(año, meses[mes_nombre]):
     cols = st.columns(7)
@@ -280,19 +252,697 @@ for semana in calendar.monthcalendar(año, meses[mes_nombre]):
         rec = data.get(key, {})
         pag = rec.get("paginas", 0)
         color = rec.get("color", "#FFFFFF")
-
-        # Build tooltip content
-        tips = []
-        for t in rec.get("topics", []):
-            tips.append(f"• {t['tema_nombre']} ({t['paginas']} p.)")
+        tips = [f"• {t['tema_nombre']} ({t['paginas']} p.)" for t in rec.get("topics", [])]
         if rec.get("notas"):
             tips.append(f"Notas: {rec['notas']}")
         tooltip_body = "\n".join(tips) if tips else "Sin registro"
-
-        html = f"""
-        <div class="tooltip" style="color:{color};">
-            {d}<br>{pag} pág.
-            <span class="tooltiptext">{tooltip_body}</span>
-        </div>
-        """
+        html = f'<div class="tooltip" style="color:{color};">{d}<br>{pag} pág.<span class="tooltiptext">{tooltip_body}</span></div>'
         cols[i].markdown(html, unsafe_allow_html=True)
+
+# ----------------------------------------------------------
+# 8. 300 random daily motivational quotes
+# ----------------------------------------------------------
+QUOTE_POOL = [
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+    "Cada día suma un punto en tu marcador de vida.",
+    "El hábito ya te lleva de la mano.",
+    "Tu esfuerzo es un tren que no frena.",
+    "Cada línea es un ladrillo de oro.",
+    "Leer es crecer sin dolor.",
+    "Cada día es un regalo envuelto en páginas.",
+    "El conocimiento es la única riqueza que se multiplica al compartir.",
+    "Cada página es un abrazo a tu futuro yo.",
+    "Estudiar es sembrar; cosecharás sin falta.",
+    "El éxito es la suma de pequeños esfuerzos repetidos.",
+    "Cada día es una oportunidad de mejorar.",
+    "El conocimiento es tu superpoder.",
+    "Cada página es un abrazo a tu futuro.",
+    "Aprender es la única forma de ser libre.",
+    "El éxito es el resultado de hábitos diarios.",
+    "Hoy estudias, mañana inspira.",
+    "El conocimiento es la semilla de la grandeza.",
+    "Cada día es una victoria silenciosa.",
+    "Tu legado se escribe página a página.",
+    "Nunca pares, nunca retrocedas.",
+    "El saber es libertad.",
+    "Cada página es un escalón hacia tu destino.",
+    "La constancia te convierte en leyenda.",
+    "El conocimiento es tu mejor arma.",
+] 
+
+# ----------------------------------------------------------
+# 9. Motivational quote of the day
+# ----------------------------------------------------------
+st.markdown("---")
+st.subheader("✨ Frase motivacional del día")
+dias_totales = len(data)  # días con registro
+quote_index = dias_totales % len(QUOTE_POOL)
+st.write(f"**{QUOTE_POOL[quote_index]}**")
+
+# ----------------------------------------------------------
+# 10. Export / Import utilities (JSON + CSV)
+# ----------------------------------------------------------
+st.markdown("---")
+st.subheader("🔧 Herramientas de respaldo")
+
+# Descargar JSON
+json_bytes = json.dumps(data, ensure_ascii=False, indent=4).encode("utf-8")
+st.download_button(
+    label="📥 Descargar JSON",
+    data=json_bytes,
+    file_name=f"backup_{date.today().isoformat()}.json",
+    mime="application/json"
+)
+
+# Cargar JSON
+uploaded = st.file_uploader("📤 Restaurar JSON", type=["json"])
+if uploaded:
+    new_data = json.load(uploaded)
+    if st.button("⚠️ Sobrescribir datos actuales"):
+        data.clear()
+        data.update(new_data)
+        guardar_datos()
+        st.success("Datos restaurados desde archivo.")
+        st.rerun()
+
+# Generar CSV resumen
+import io, csv
+buffer = io.StringIO()
+writer = csv.writer(buffer)
+writer.writerow(["Fecha", "Páginas", "Tema(s)", "Notas", "Color"])
+for k, v in sorted(data.items()):
+    temas = " | ".join([t["tema_nombre"] for t in v.get("topics", [])])
+    writer.writerow([k, v.get("paginas", 0), temas, v.get("notas", ""), v.get("color", "")])
+csv_bytes = buffer.getvalue().encode("utf-8")
+st.download_button(
+    label="📊 Descargar CSV resumen",
+    data=csv_bytes,
+    file_name=f"resumen_{date.today().isoformat()}.csv",
+    mime="text/csv"
+)
+
+# ----------------------------------------------------------
+# 11. Stats dashboard
+# ----------------------------------------------------------
+st.markdown("---")
+st.subheader("📈 Estadísticas rápidas")
+
+# Gráfico de línea: páginas por día
+import pandas as pd
+df = pd.DataFrame([
+    {"fecha": k, "paginas": v.get("paginas", 0)}
+    for k, v in sorted(data.items())
+])
+if not df.empty:
+    df["fecha"] = pd.to_datetime(df["fecha"])
+    st.line_chart(df.set_index("fecha")["paginas"])
+
+# Top 10 temas más leídos
+from collections import Counter
+tema_counter = Counter()
+for v in data.values():
+    for t in v.get("topics", []):
+        tema_counter[t["tema_nombre"]] += t["paginas"]
+top10 = tema_counter.most_common(10)
+if top10:
+    st.write("**Top 10 temas (páginas leídas):**")
+    for tema, pag in top10:
+        st.write(f"• {tema}: {pag} p.")
+
+# ----------------------------------------------------------
+# 12. Footer
+# ----------------------------------------------------------
+st.markdown("---")
+st.caption("Hecho con ❤️ para el reto de 100 días. ¡Tú puedes!")
