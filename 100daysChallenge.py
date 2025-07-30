@@ -957,23 +957,25 @@ studied_set = set(data[STUDIED_KEY])     # faster look-ups
 # ------------- build master list -------------
 master_topics = []
 for g, aid, aname, tid, tema, pages in SYLLABUS:
-    uid = f"{g}|{aid}|{tid}"            # unique id for the topic
+    uid = f"{g}|{aid}|{tid}|{pages}"     # UNIQUE identifier
     master_topics.append((uid, g, aname, f"T{tid} – {tema} ({pages} p.)"))
 
 # ------------- search filter -------------
 filtro = st.text_input("🔍 Filtrar temas:", placeholder="Ej. Regresión")
 if filtro:
     filtro = filtro.lower()
-    master_topics = [t for t in master_topics if filtro in t[2].lower() or filtro in t[3].lower()]
+    master_topics = [t for t in master_topics
+                     if filtro in t[2].lower() or filtro in t[3].lower()]
 
 # ------------- display -------------
 cambios = False
-for uid, g, aname, tema_txt in sorted(master_topics, key=lambda x: (x[1], x[2], x[3])):
+for uid, g, aname, tema_txt in sorted(master_topics,
+                                      key=lambda x: (x[1], x[2], x[3])):
     checked = uid in studied_set
     nuevo = st.checkbox(
         f"**{g} ▸ {aname} ▸** {tema_txt}",
         value=checked,
-        key=f"cb_{uid}"
+        key=f"cb_{uid}"                  # now unique
     )
     if nuevo != checked:
         cambios = True
@@ -987,11 +989,10 @@ if cambios:
     guardar_datos()
     st.rerun()
 
-# ------------- quick summary -------------
 st.metric("Temas completados", f"{len(studied_set)} / {len(SYLLABUS)}")
 
 # ----------------------------------------------------------
-# 13. Footer (renumbered)
+# 13. Footer
 # ----------------------------------------------------------
 st.markdown("---")
 st.caption("Hecho con ❤️ para el reto de 100 días. ¡Tú puedes!")
