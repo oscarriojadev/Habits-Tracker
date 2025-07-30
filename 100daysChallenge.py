@@ -926,6 +926,7 @@ import pandas as pd
 df = pd.DataFrame([
     {"fecha": k, "paginas": v.get("paginas", 0)}
     for k, v in sorted(data.items())
+    if isinstance(v, dict) and v.get("paginas") is not None
 ])
 if not df.empty:
     df["fecha"] = pd.to_datetime(df["fecha"])
@@ -935,6 +936,8 @@ if not df.empty:
 from collections import Counter
 tema_counter = Counter()
 for v in data.values():
+    if not isinstance(v, dict):
+        continue
     for t in v.get("topics", []):
         tema_counter[t["tema_nombre"]] += t["paginas"]
 top10 = tema_counter.most_common(10)
