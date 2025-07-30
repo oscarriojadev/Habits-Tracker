@@ -877,7 +877,7 @@ st.write(f"**{QUOTE_POOL[quote_index]}**")
 st.markdown("---")
 st.subheader("🔧 Herramientas de respaldo")
 
-# Descargar JSON
+# --- JSON download
 json_bytes = json.dumps(data, ensure_ascii=False, indent=4).encode("utf-8")
 st.download_button(
     label="📥 Descargar JSON",
@@ -886,7 +886,7 @@ st.download_button(
     mime="application/json"
 )
 
-# Cargar JSON
+# --- JSON upload
 uploaded = st.file_uploader("📤 Restaurar JSON", type=["json"])
 if uploaded:
     new_data = json.load(uploaded)
@@ -897,13 +897,15 @@ if uploaded:
         st.success("Datos restaurados desde archivo.")
         st.rerun()
 
-# Generar CSV resumen
+# --- CSV export
 import io, csv
 buffer = io.StringIO()
 writer = csv.writer(buffer)
 writer.writerow(["Fecha", "Páginas", "Tema(s)", "Notas", "Color"])
 for k, v in sorted(data.items()):
-    temas = " | ".join([t["tema_nombre"] for t in (v.get("topics", []) if isinstance(v, dict) else [])])
+    if not isinstance(v, dict):          # skip non-dict entries
+        continue
+    temas = " | ".join([t["tema_nombre"] for t in v.get("topics", [])])
     writer.writerow([k, v.get("paginas", 0), temas, v.get("notas", ""), v.get("color", "")])
 csv_bytes = buffer.getvalue().encode("utf-8")
 st.download_button(
