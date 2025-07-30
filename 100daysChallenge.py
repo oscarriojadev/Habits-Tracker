@@ -167,12 +167,14 @@ st.sidebar.title("📊 Progreso global")
 total_pages = sum(d.get("paginas", 0) for d in data.values() if isinstance(d, dict))
 st.sidebar.metric(label="Páginas leídas", value=f"{total_pages} / 3000")
 st.sidebar.progress(total_pages / 3000)
-_, rank = get_rank(total_pages)
-st.sidebar.write(f"**Rango:** {rank}")
 
-# --- Temas completados
+# Temas completados
 studied = len(data.get("_studied_topics", []))
 st.sidebar.metric(label="Temas completados", value=f"{studied} / {len(SYLLABUS)}")
+
+# Rango
+_, rank = get_rank(total_pages)
+st.sidebar.write(f"**Rango:** {rank}")
 
 # ----------------------------------------------------------
 # 5. Month / Day selector
