@@ -60,13 +60,15 @@ with col2:
 # ----------  Submit logic  ----------
 if submitted and selected is not None:
     st.session_state.answered = True
+    st.session_state.choice = selected
+
     if selected == q["Correct Answer"]:
         st.session_state.score += 1
         st.success("✅ Correct!")
     else:
         st.error("❌ Incorrect.")
     st.info(f"**Correct answer:** {q['Correct Answer']}")
-    st.rerun()
+    #  ↓↓↓  DON’T call st.rerun() here
 
 # ----------  Next / Finish logic  ----------
 if next_btn:
