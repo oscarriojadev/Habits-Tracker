@@ -75,18 +75,34 @@ if submitted:
     st.info(f"**Correct answer:** {q['Correct Answer']}")
     # NO st.rerun() here
 
-# ----------  Next / Finish logic  ----------
-if next_btn:
-    if idx < len(st.session_state.questions) - 1:
-        st.session_state.idx += 1
-        st.session_state.answered = False
-        st.session_state.pop("current_choice", None)
-        st.rerun()
-    else:
-        st.balloons()
-        st.write("### 🎉 Quiz finished!")
-        st.write(f"**Your score: {st.session_state.score} / {len(st.session_state.questions)}**")
-        if st.button("Restart Quiz"):
-            for k in ("idx", "score", "answered", "current_choice", "questions"):
-                st.session_state.pop(k, None)
+# ----------  Handle Submit / Next in one place  ----------
+if not st.session_state.answered:
+    if st.button("Submit"):
+        selected = st.session_state.get("current_choice")
+        if selected is None:
+            st.warning("Please pick an answer.")
+        else:
+            st.session_state.answered = True
+            st.session_state.choice = selected
+            if selected == q["Correct Answer"]:
+                st.session_state.score += 1
+                st.success("✅ Correct!")
+            else:
+                st.error("❌ Incorrect")
+            st.info(f"**Correct answer:** {q['Correct Answer']}")
+else:
+    # answered == True
+    if st.button("Next"):
+        if idx < len(st.session_state.questions) - 1:
+            st.session_state.idx += 1
+            st.session_state.answered = False
+            st.session_state.pop("current_choice", None)
             st.rerun()
+        else:
+            st.balloons()
+            st.write("### 🎉 Quiz finished!")
+            st.write(f"**Your score: {st.session_state.score} / {len(st.session_state.questions)}**")
+            if st.button("Restart Quiz"):
+                for k in ("idx", "score", "answered", "current_choice", "questions"):
+                    st.session_state.pop(k, None)
+                st.rerun()
