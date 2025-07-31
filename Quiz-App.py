@@ -1,36 +1,39 @@
 # quiz.py
 import streamlit as st
+import pandas as pd
 
-# ------------- dummy data so you can test immediately ----------------
-if "questions" not in st.session_state:
-    st.session_state.questions = [
-        {
-            "Topic": "Python",
-            "Question": "What does `len()` return for `[1, 2, 3]`?",
-            "Answer A": "3",
-            "Answer B": "2",
-            "Answer C": "Error",
-            "Answer D": "None",
-            "Correct Answer": "3",
-        },
-        {
-            "Topic": "Streamlit",
-            "Question": "Which widget shows balloons?",
-            "Answer A": "st.balloons()",
-            "Answer B": "st.party()",
-            "Answer C": "st.celebrate()",
-            "Answer D": "st.fireworks()",
-            "Correct Answer": "st.balloons()",
-        },
-    ]
-# ---------------------------------------------------------------------
+# -------------------- 1. Let the user upload a CSV ---------------------------
+uploaded = st.file_uploader(
+    "Upload a CSV with columns: Topic, Question, Answer A, Answer B, Answer C, Answer D, Correct Answer",
+    type="csv"
+)
 
-# initialise session-state variables
+if uploaded is None:
+    st.stop()          # nothing to do until a file is provided
+
+# read the CSV and convert to the same list-of-dicts format you already use
+df = pd.read_csv(uploaded, dtype=str)          # keep everything as strings
+df = df.fillna("")                               # tidy empty cells
+
+required_cols = {"Topic", "Question", "Answer A", "Answer B",
+                 "Answer C", "Answer D", "Correct Answer"}
+missing = required_cols.difference(df.columns)
+if missing:
+    st.error(f"CSV is missing columns: {', '.join(missing)}")
+    st.stop()
+
+st.session_state.questions = df.to_dict("records")
+# -----------------------------------------------------------------------------
+
+
+# -------------------- 2. initialise session state (same as before) ----------
 for k, v in {"idx": 0, "score": 0, "answered": False}.items():
     if k not in st.session_state:
         st.session_state[k] = v
+# -----------------------------------------------------------------------------
 
-# -------------------- UI ---------------------------------------------------
+
+# -------------------- 3. everything below is unchanged -----------------------
 idx = st.session_state.idx
 q   = st.session_state.questions[idx]
 
@@ -40,23 +43,21 @@ st.write(q["Question"])
 
 choices = [q["Answer A"], q["Answer B"], q["Answer C"], q["Answer D"]]
 
-# radio always enabled so its value is always available
 choice = st.radio(
     "Select an answer:",
     choices,
-    key=f"radio_{idx}",        # unique key per question
-    index=None                 # no pre-selection
+    key=f"radio_{idx}",
+    index=None
 )
 
 col1, col2, _ = st.columns([1, 1, 1])
 
 with col1:
-    submitted = st.button("Submit", disabled=st.session_state.answered)
+    submitted = st.button("Submit", disabled=st.session_state.answered, key=f"submit_{idx}")
 
 with col2:
-    next_btn = st.button("Next", disabled=not st.session_state.answered)
+    next_btn = st.button("Next", disabled=not st.session_state.answered, key=f"next_{idx}")
 
-# -------------------- Submit logic -----------------------------------------
 if submitted and choice is not None:
     st.session_state.answered = True
     if choice == q["Correct Answer"]:
@@ -66,7 +67,6 @@ if submitted and choice is not None:
         st.error("❌ Incorrect")
     st.info(f"**Correct answer:** {q['Correct Answer']}")
 
-# -------------------- Next / Finish logic ----------------------------------
 if next_btn:
     if idx < len(st.session_state.questions) - 1:
         st.session_state.idx += 1
