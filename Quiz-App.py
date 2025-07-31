@@ -1,33 +1,3 @@
-# Quiz-App.py
-import streamlit as st
-import pandas as pd
-
-# ----------------------------------------------------------
-# 1.  Session-state helpers
-# ----------------------------------------------------------
-def init_state():
-    if "idx" not in st.session_state:
-        st.session_state.idx = 0
-        st.session_state.score = 0
-        st.session_state.answered = False
-        st.session_state.choice = None
-        st.session_state.questions = []
-
-# ----------------------------------------------------------
-# 2.  Load & validate CSV
-# ----------------------------------------------------------
-def load_questions(df: pd.DataFrame) -> bool:
-    required_cols = ["Topic", "Question", "Answer A", "Answer B", "Answer C", "Answer D", "Correct Answer"]
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        st.error(f"Missing columns: {missing}")
-        return False
-    st.session_state.questions = df[required_cols].to_dict("records")
-    return True
-
-# ----------------------------------------------------------
-# 3.  Quiz logic
-# ----------------------------------------------------------
 def show_question():
     q = st.session_state.questions[st.session_state.idx]
     st.markdown(f"**{q['Topic']}**")
@@ -59,7 +29,8 @@ def show_question():
             st.session_state.score += 1
             st.success("✅ Correct!")
         else:
-            st.error(f"❌ Incorrect. Correct: **{q['Correct Answer']}**")
+            st.error("❌ Incorrect.")
+        st.info(f"**Correct answer:** {q['Correct Answer']}")
         st.rerun()
 
     if next_btn and st.session_state.answered:
@@ -76,25 +47,3 @@ def show_question():
                 for key in ["idx", "score", "answered", "choice", "questions"]:
                     st.session_state.pop(key, None)
                 st.rerun()
-
-# ----------------------------------------------------------
-# 4.  Main app
-# ----------------------------------------------------------
-st.set_page_config(page_title="Quiz-App | CSV Upload", page_icon="📊")
-st.title("📊 Upload-Your-Own CSV Quiz")
-
-init_state()
-
-if not st.session_state.questions:
-    uploaded = st.file_uploader(
-        "Upload a CSV file with the columns:\n"
-        "**Topic** | **Question** | **Answer A** | **Answer B** | **Answer C** | **Answer D** | **Correct Answer**",
-        type=["csv"]
-    )
-    if uploaded:
-        df = pd.read_csv(uploaded)
-        if load_questions(df):
-            st.success(f"Loaded {len(st.session_state.questions)} questions.")
-            st.rerun()
-else:
-    show_question()
