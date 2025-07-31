@@ -1,4 +1,4 @@
-# streamlit_app.py
+# Quiz-App.py
 import streamlit as st
 import pandas as pd
 
@@ -14,9 +14,9 @@ def init_state():
         st.session_state.questions = []
 
 # ----------------------------------------------------------
-# 2.  Upload CSV
+# 2.  Load & validate CSV
 # ----------------------------------------------------------
-def load_questions(df: pd.DataFrame):
+def load_questions(df: pd.DataFrame) -> bool:
     required_cols = ["Topic", "Question", "Answer A", "Answer B", "Answer C", "Answer D", "Correct Answer"]
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
@@ -34,11 +34,16 @@ def show_question():
     st.write(f"Question {st.session_state.idx + 1} / {len(st.session_state.questions)}")
     st.write(q["Question"])
 
+    choices = [q["Answer A"], q["Answer B"], q["Answer C"], q["Answer D"]]
+    idx = None
+    if st.session_state.answered and st.session_state.choice in choices:
+        idx = choices.index(st.session_state.choice)
+
     choice = st.radio(
         "Select an answer:",
-        [q[f"Answer {c}"] for c in "ABCD"],
+        choices,
         key=f"q{st.session_state.idx}",
-        index=None if not st.session_state.answered else "ABCD".index(st.session_state.choice)
+        index=idx
     )
 
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -76,13 +81,13 @@ def show_question():
 # 4.  Main app
 # ----------------------------------------------------------
 st.set_page_config(page_title="Quiz-App | CSV Upload", page_icon="📊")
-st.title("📊 Upload your own CSV Quiz")
+st.title("📊 Upload-Your-Own CSV Quiz")
 
 init_state()
 
 if not st.session_state.questions:
     uploaded = st.file_uploader(
-        "Choose a CSV file with the columns:\n"
+        "Upload a CSV file with the columns:\n"
         "**Topic** | **Question** | **Answer A** | **Answer B** | **Answer C** | **Answer D** | **Correct Answer**",
         type=["csv"]
     )
