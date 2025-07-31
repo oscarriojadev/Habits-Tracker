@@ -1,65 +1,51 @@
 import streamlit as st
 
 def show_question() -> None:
-    """Render the current quiz question, radio buttons and navigation."""
-    idx      = st.session_state.idx
-    question = st.session_state.questions[idx]
-    answered = st.session_state.answered
-    choice   = st.session_state.choice
+    idx = st.session_state.idx
+    q   = st.session_state.questions[idx]
 
-    # ── Question meta ----------------------------------------------------------
-    st.markdown(f"**{question['Topic']}**")
+    st.markdown(f"**{q['Topic']}**")
     st.write(f"Question {idx + 1} / {len(st.session_state.questions)}")
-    st.write(question["Question"])
+    st.write(q["Question"])
 
-    # ── Answer options ---------------------------------------------------------
-    choices = [question["Answer A"], question["Answer B"],
-               question["Answer C"], question["Answer D"]]
+    choices = [q["Answer A"], q["Answer B"], q["Answer C"], q["Answer D"]]
 
-    # Default selection (after the first submission)
-    default = choices.index(choice) if answered and choice in choices else None
-
-    # Use a unique key so each question gets its own radio widget
+    # stable key so Streamlit can remember the selection
     selected = st.radio(
         "Select an answer:",
         choices,
-        key=f"q_{idx}",
-        index=default,
-        disabled=answered
+        key="current_choice",
+        index=None,          # no pre-selection on first view
+        disabled=st.session_state.answered
     )
 
-    # ── Buttons ----------------------------------------------------------------
     col1, col2, _ = st.columns([1, 1, 1])
     with col1:
-        submitted = st.button("Submit", disabled=answered)
+        submitted = st.button("Submit", disabled=st.session_state.answered)
     with col2:
-        next_btn = st.button("Next", disabled=not answered)
+        next_btn = st.button("Next", disabled=not st.session_state.answered)
 
-    # ── Submit logic -----------------------------------------------------------
     if submitted and selected is not None:
         st.session_state.answered = True
-        st.session_state.choice   = selected
-        if selected == question["Correct Answer"]:
+        if selected == q["Correct Answer"]:
             st.session_state.score += 1
             st.success("✅ Correct!")
         else:
             st.error("❌ Incorrect.")
-        st.info(f"**Correct answer:** {question['Correct Answer']}")
+        st.info(f"**Correct answer:** {q['Correct Answer']}")
         st.rerun()
 
-    # ── Next / Finish logic ----------------------------------------------------
     if next_btn:
         if idx < len(st.session_state.questions) - 1:
-            st.session_state.idx      += 1
-            st.session_state.answered  = False
-            st.session_state.choice    = None
+            st.session_state.idx += 1
+            st.session_state.answered = False
+            st.session_state.pop("current_choice", None)
             st.rerun()
         else:
             st.balloons()
             st.write("### 🎉 Quiz finished!")
             st.write(f"**Your score: {st.session_state.score} / {len(st.session_state.questions)}**")
-
             if st.button("Restart Quiz"):
-                for k in ("idx", "score", "answered", "choice", "questions"):
+                for k in ("idx", "score", "answered", "current_choice", "questions"):
                     st.session_state.pop(k, None)
                 st.rerun()
