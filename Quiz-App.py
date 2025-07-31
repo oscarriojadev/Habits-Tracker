@@ -58,17 +58,22 @@ with col2:
     next_btn = st.button("Next", disabled=not st.session_state.answered)
 
 # ----------  Submit logic  ----------
-if submitted and selected is not None:
-    st.session_state.answered = True
-    st.session_state.choice = selected
+if submitted:
+    # Read the answer directly from the widget key
+    selected = st.session_state.get("current_choice")
+    if selected is None:          # user never picked anything
+        st.warning("Please choose an answer first.")
+        st.stop()
 
+    st.session_state.answered = True
+    st.session_state.choice   = selected
     if selected == q["Correct Answer"]:
         st.session_state.score += 1
         st.success("✅ Correct!")
     else:
         st.error("❌ Incorrect.")
     st.info(f"**Correct answer:** {q['Correct Answer']}")
-    #  ↓↓↓  DON’T call st.rerun() here
+    # NO st.rerun() here
 
 # ----------  Next / Finish logic  ----------
 if next_btn:
